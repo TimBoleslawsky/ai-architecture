@@ -1,0 +1,29 @@
+[project]
+name = "quality-inspection"
+version = "0.1.0"
+description = "AI as a Product showcase: steel-surface defect classification, self-trained and self-deployed."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "onnxruntime>=1.19",
+    "numpy>=1.26",
+    "Pillow>=10.4",
+    "pydantic>=2.8",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0",
+    "psycopg2-binary>=2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx2>=0.2",
+    "torch>=2.3",
+    "torchvision>=0.18",
+    "onnxscript>=0.1",
+]
+
+[tool.uv]
+package = false

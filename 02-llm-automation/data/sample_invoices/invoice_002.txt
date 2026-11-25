@@ -1,0 +1,15 @@
+SUPPLIER: Schneider Automation AG
+VAT ID: DE 817 422 399
+INVOICE No.: SA-2026-88921
+Issue date: 2026-11-18
+Due date: 2026-12-18
+
+Line items:
+1x Industrial PLC controller (Qty 5, EUR 1480.00 each) = EUR 7400.00
+1x Fieldbus module (Qty 3, EUR 620.00 each) = EUR 1860.00
+
+Subtotal: EUR 9260.00
+VAT 19%: EUR 1759.40
+TOTAL: EUR 11019.40
+
+Bank: IBAN DE64 5005 0210 0004 4063 00

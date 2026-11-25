@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: inspection
+      POSTGRES_PASSWORD: inspection
+      POSTGRES_DB: inspection
+    ports:
+      - "5434:5432"
+    volumes:
+      - inspection_pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inspection -d inspection"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  serve:
+    build: ..
+    environment:
+      DATABASE_URL: postgresql://inspection:inspection@db:5432/inspection
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  inspection_pgdata:

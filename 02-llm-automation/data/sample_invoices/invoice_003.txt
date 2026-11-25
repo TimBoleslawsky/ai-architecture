@@ -1,0 +1,14 @@
+SUPPLIER: Nordic Metals OU
+VAT ID: EE100051327
+INVOICE No.: NM-2026-113
+Issue date: 2026-11-05
+
+Line items:
+1x Aluminum sheet 2mm (Qty 20, EUR 33.00 each) = EUR 660.00
+1x Stainless rod 10mm (Qty 8, EUR 14.50 each) = EUR 116.00
+
+Subtotal: EUR 770.00
+VAT 19%: EUR 146.30
+TOTAL: EUR 916.30
+
+Bank: IBAN EE38 2200 2210 2014 5685

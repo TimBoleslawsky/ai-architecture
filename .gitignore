@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data & artifacts
+data/raw/
+data/processed/
+data/generated/
+models/
+artifacts/
+*.onnx
+*.joblib
+*.pt
+*.pth
+*.sqlite3
+*.db
+
+# Env / secrets
+.env
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# uv
+.uv/
+
+# opencode
+opencode.json

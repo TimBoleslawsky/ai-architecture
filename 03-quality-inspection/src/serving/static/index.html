@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defect Inspection</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto;
+    padding: 0 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; }
+  .drop { border: 2px dashed #888; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; }
+  .drop.drag { border-color: #38f; background: rgba(51,136,255,.08); }
+  img.preview { max-width: 220px; border: 1px solid #888; border-radius: 8px; margin-top: 1rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .bar { height: 10px; background: #4caf50; border-radius: 5px; }
+  .cls { width: 160px; text-align: right; }
+  #result { margin-top: 1rem; }
+  #result[hidden] { display: none; }
+  code { background: rgba(128,128,128,.15); padding: .1rem .3rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Defect Inspection</h1>
+<p>Steel-surface defect classifier. Upload an image to get the predicted defect class and confidence.</p>
+
+<div class="drop" id="drop">
+  <p>Click to choose or drop an image</p>
+  <input type="file" id="file" accept="image/*" hidden>
+</div>
+
+<div id="result" hidden>
+  <img class="preview" id="preview" alt="preview">
+  <p><strong id="top"></strong></p>
+  <div id="bars"></div>
+</div>
+
+<script>
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const preview = document.getElementById('preview');
+  const result = document.getElementById('result');
+  const topEl = document.getElementById('top');
+  const bars = document.getElementById('bars');
+
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault(); drop.classList.remove('drag');
+    if (e.dataTransfer.files.length) send(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length) send(fileInput.files[0]); });
+
+  async function send(file) {
+    preview.src = URL.createObjectURL(file);
+    const fd = new FormData();
+    fd.append('file', file);
+    const resp = await fetch('/predict/image', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok) { alert('Error: ' + JSON.stringify(data)); return; }
+
+    topEl.textContent = data.class + '  (' + (data.confidence * 100).toFixed(1) + '%)';
+    result.hidden = false;
+    bars.innerHTML = '';
+    for (const [cls, p] of Object.entries(data.probabilities).sort((a,b) => b[1]-a[1])) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const label = document.createElement('span');
+      label.className = 'cls'; label.textContent = cls;
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.width = Math.max(2, p * 100) + '%';
+      const pct = document.createElement('span');
+      pct.textContent = (p * 100).toFixed(1) + '%';
+      row.append(label, bar, pct);
+      bars.appendChild(row);
+    }
+  }
+</script>
+</body>
+</html>

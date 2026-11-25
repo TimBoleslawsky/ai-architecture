@@ -1,0 +1,59 @@
+"""Integration tests for the serving layer.
+
+These require a trained model (run ``uv run python -m src.models.train`` first);
+they are skipped automatically when the registry is absent so ``pytest`` stays
+green on a fresh checkout.
+"""
+import pandas as pd
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    not __import__("pathlib").Path("models/registry.json").exists(),
+    reason="model not trained yet - run src.data.prepare + src.models.train first",
+)
+
+
+def test_predictor_on_raw_sensor_window(tmp_path):
+    from src.data.synthetic import generate_fleet
+    from src.serving.predictor import Predictor
+
+    raw = generate_fleet(20, seed=5)
+    unit = raw["unit"].iloc[0]
+    window = raw[raw["unit"] == unit].tail(15).head(10)
+    rows = window[["cycle"] + [c for c in raw.columns if c.startswith("s_")]].to_dict("records")
+
+    p = Predictor()
+    features = p.features_from_rows(rows)
+    assert list(features.columns) == p.feature_columns
+    assert len(features) == 10
+
+    rul, risk = p.predict(features.iloc[-1])
+    assert 0 <= rul
+    assert risk in {"high", "medium", "low"}
+
+
+def test_predict_endpoint_accepts_raw_readings():
+    from fastapi.testclient import TestClient
+    from src.data.synthetic import generate_fleet
+    from src.serving.app import app
+
+    raw = generate_fleet(20, seed=5)
+    unit = raw["unit"].iloc[0]
+    window = raw[raw["unit"] == unit].tail(15)
+    rows = window[["cycle"] + [c for c in raw.columns if c.startswith("s_")]].to_dict("records")
+
+    client = TestClient(app)
+    resp = client.post("/predict", json={"unit": int(unit), "rows": rows})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["unit"] == int(unit)
+    assert body["risk"] in {"high", "medium", "low"}
+
+
+def test_predict_endpoint_rejects_missing_sensors():
+    from fastapi.testclient import TestClient
+    from src.serving.app import app
+
+    client = TestClient(app)
+    resp = client.post("/predict", json={"unit": 1, "rows": [{"cycle": 1}]})
+    assert resp.status_code == 400

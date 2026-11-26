@@ -13,6 +13,7 @@ data/processed/
 data/generated/
 models/
 artifacts/
+lightning_logs/
 *.onnx
 *.joblib
 *.pt

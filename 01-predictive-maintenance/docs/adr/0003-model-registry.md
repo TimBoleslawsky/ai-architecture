@@ -16,18 +16,23 @@ Store a single versioned `models/registry.json` manifest alongside the artifact:
 
 ```json
 {
-  "name": "rul-random-forest",
+  "name": "rul-tcn",
   "version": 1,
-  "artifact": "models/rf_rul.joblib",
-  "feature_columns": ["cycle", "s_1", "..."],
+  "artifact": "models/rul_tcn.onnx",
+  "input_name": "input",
+  "output_name": "output",
+  "window": 30,
   "sensor_columns": ["s_1", "..."],
+  "sensor_mean": [99.1, "..."],
+  "sensor_std": [3.2, "..."],
   "metrics": {"rmse_cycles": 18.2, "r2": 0.90},
   "trained_at": "..."
 }
 ```
 
-Serving loads the artifact *and* the schema from this one file, making the
-model self-describing.
+Serving loads the artifact *and* the full input contract (window length, sensor
+order, per-sensor normalization statistics) from this one file, making the model
+self-describing.
 
 ## Consequences
 

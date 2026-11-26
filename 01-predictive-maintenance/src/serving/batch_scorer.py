@@ -48,8 +48,7 @@ def score_fleet(predictor: Predictor) -> int:
                 df = pd.DataFrame(cur.fetchall(), columns=cols)
                 if df.empty:
                     continue
-                features = predictor.features_from_rows(df.to_dict("records"))
-                rul, risk = predictor.predict(features.iloc[-1])
+                rul, risk = predictor.predict_from_rows(df.to_dict("records"))
                 cur.execute(upsert, (unit, float(rul), risk))
                 scored += 1
         conn.commit()

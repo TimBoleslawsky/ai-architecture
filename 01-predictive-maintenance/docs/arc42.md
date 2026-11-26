@@ -62,15 +62,17 @@ flowchart LR
 
 ## 4. Solution Strategy
 
-- **Batch-first analytics** on tabular sensor data.
-- **Ensemble ML** (RandomForest) instead of deep learning for cost reasons
-  (ADR-0001).
+- **Batch-first analytics** on raw sensor time-series (sequence windows).
+- **Efficacy-first deep model** (TCN on raw sensor windows) over a classical
+  efficiency-first tabular baseline, because the workload runs offline in the
+  cloud (ADR-0001). The RandomForest on rolling features is kept as a baseline
+  for the comparison.
 - **Two serving patterns** (ADR-0002): a low-latency REST endpoint for
   on-demand queries and a scheduled batch scorer for fleet-wide status.
 - **Lightweight versioned registry** (ADR-0003) and an **in-process scheduler**
   (ADR-0004) to keep operations trivial.
-- **Causal feature engineering** shared between training and serving to
-  guarantee consistency.
+- **Shared preprocessing** (last-`W`-cycles window + train-set per-sensor
+  statistics) between training and serving to guarantee consistency.
 
 ## 5. Building Block View
 
@@ -106,12 +108,13 @@ flowchart LR
         ENG["engineer.py"]
     end
     subgraph Model["src/models"]
-        TR["train.py"]
+        TR["engine/train.py (TCN, Lightning)"]
+        BS["baseline.py (RandomForest)"]
     end
     subgraph Serve["src/serving"]
-        PRED["predictor.py"]
+        PRED["predictor.py (ONNX Runtime)"]
         API["app.py"]
-        BS["batch_scorer.py"]
+        BSC["batch_scorer.py"]
     end
     subgraph Db["src"]
         DB["db.py"]
@@ -120,10 +123,10 @@ flowchart LR
     DL --> PRE
     PRE --> ENG
     ENG --> TR
-    TR -->|"registry.json + .joblib"| PRED
+    TR -->|"registry.json + .onnx"| PRED
     PRED --> API
-    PRED --> BS
-    BS --> DB
+    PRED --> BSC
+    BSC --> DB
     DB --> Pg[("Postgres")]
 ```
 
@@ -136,11 +139,11 @@ sequenceDiagram
     participant U as Planner
     participant A as API (:8000)
     participant P as Predictor
-    participant M as Model (.joblib)
+    participant M as Model (.onnx)
     U->>A: POST /predict {unit, rows[1..N]}
     A->>P: rows
-    P->>P: add causal rolling features
-    P->>M: feature row
+    P->>P: take last W cycles, normalize (registry stats)
+    P->>M: window (1, W, S)
     M-->>P: RUL
     P-->>A: {RUL, risk band}
     A-->>U: 200 {predicted_rul, risk}
@@ -182,20 +185,23 @@ flowchart LR
 
 ## 8. Cross-cutting Concepts
 
-- **Feature consistency:** `engineer.py` is the single implementation of
-  rolling-window features; training and serving both call it. All features are
-  causal (only past + current readings).
+- **Preprocessing consistency:** the deep model and the API share the *same*
+  contract — the last `W` sensor cycles, normalized with the train-set
+  per-sensor statistics stored in the registry (zero train/serve skew). The
+  rolling-window features in `engineer.py` are used only by the RandomForest
+  baseline.
 - **Split discipline:** train/test are split *by unit* so the test fleet is
   truly out-of-sample (no unit appears in both).
-- **Registry as source of truth:** `models/registry.json` stores feature and
-  sensor column schemas, metrics and version → models are self-describing.
+- **Registry as source of truth:** `models/registry.json` stores the window
+  length, sensor order, normalization statistics, metrics and version → models
+  are self-describing.
 - **Observability:** the batch worker logs scoring duration/unit counts; the API
   exposes `/health` and `/model`.
 - **Configuration:** `.env` (see `.env.example`) for DB URL and risk thresholds.
 
 ## 9. Architecture Decisions
 
-- [ADR-0001: Model choice — RandomForest over deep learning](adr/0001-model-choice.md)
+- [ADR-0001: Model choice — efficacy-first TCN over an efficiency-first tabular model](adr/0001-model-choice.md)
 - [ADR-0002: Serving strategy — online + batch](adr/0002-serving-strategy.md)
 - [ADR-0003: Model registry without a registry server](adr/0003-model-registry.md)
 - [ADR-0004: Orchestration without Airflow](adr/0004-orchestration.md)
@@ -204,10 +210,10 @@ flowchart LR
 
 | Quality | Verification |
 |---------|--------------|
-| Maintainability | 8 pytest tests; single-command `uv run pytest` |
+| Maintainability | 13 pytest tests; single-command `uv run pytest` |
 | Reproducibility | synthetic data seeded; `uv.lock` committed; Docker image pinned to uv base |
-| Model quality | test RMSE ~18 cycles, R² ~0.90 on synthetic fleet (see `models/metrics.json`) |
-| Feature correctness | causality + shape assertions in tests |
+| Model quality | comparison harness (TCN vs RandomForest) in `models/*metrics*.json` |
+| Preprocessing correctness | window shape/causality + normalization assertions in tests |
 
 ## 11. Risks and Technical Debt
 

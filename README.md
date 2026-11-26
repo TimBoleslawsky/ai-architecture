@@ -36,7 +36,7 @@ Predictive models turn structured data into insight that drives decisions
 
 **Cost drivers & typical failure modes:** bad data infrastructure — no clean data flow means no trustworthy predictions, whatever the model.
 
-**Example in this repo:** [`01-predictive-maintenance/`](01-predictive-maintenance/) — sensor-fleet RUL prediction: RandomForest → registry → online API + batch scorer.
+**Example in this repo:** [`01-predictive-maintenance/`](01-predictive-maintenance/) — sensor-fleet RUL prediction: efficacy-first TCN (deep, cloud) vs RandomForest baseline → ONNX → online API + batch scorer.
 
 ### Bucket 2 — Automation: *do the tedious thing, correctly, at scale*
 
@@ -93,7 +93,9 @@ assistants). It usually runs live, often on the edge.
 cd 01-predictive-maintenance
 uv sync
 uv run python -m src.data.prepare
-uv run python -m src.models.train
+uv run python -m src.models.baseline         # (optional) baseline comparison
+uv run python -m src.models.engine.train \
+  --config src/models/engine/config/rul_tcn.yaml
 uv run uvicorn src.serving.app:app --reload        # POST /predict
 
 # Project 2 - invoice automation (needs Ollama)

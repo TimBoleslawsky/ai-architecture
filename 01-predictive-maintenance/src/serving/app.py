@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 
-import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -57,7 +56,8 @@ def model_info() -> dict:
         "name": predictor.registry["name"],
         "version": predictor.registry["version"],
         "metrics": predictor.registry["metrics"],
-        "feature_columns": predictor.feature_columns,
+        "window": predictor.window,
+        "sensor_columns": predictor.sensor_columns,
     }
 
 
@@ -65,8 +65,7 @@ def model_info() -> dict:
 def predict(req: PredictRequest) -> PredictResponse:
     rows = [r.model_dump() for r in req.rows]
     try:
-        features = predictor.features_from_rows(rows)
+        rul, risk = predictor.predict_from_rows(rows)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    rul, risk = predictor.predict(features.iloc[-1])
     return PredictResponse(unit=req.unit, predicted_rul=round(rul, 1), risk=risk)
